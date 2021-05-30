@@ -201,7 +201,7 @@ class SoRBSearchPolicy(tf_policy.Base):
 class SGMSearchPolicy(SoRBSearchPolicy):
     def __init__(self, agent, pdist, rb_vec, embedding_vec, embedding_cutoff=0.05, consistency_cutoff=5,
                  query_embeddings=False, cache_pdist=True, cleanup=True, no_waypoint_hopping=True,
-                 weighted_path_planning=False, localize_to_nearest=True):
+                 weighted_path_planning=False, localize_to_nearest=True, criterion="two-way"):
         """
         Args:
             agent: the UvfAgent that self._action will use to act in the environment
@@ -222,6 +222,7 @@ class SGMSearchPolicy(SoRBSearchPolicy):
         self.consistency_cutoff = consistency_cutoff
         self.query_embeddings = query_embeddings
         self.cache_pdist = cache_pdist
+        self.criterion = criterion
         if cache_pdist:
             self.cached_pdist = pdist
         super(SGMSearchPolicy, self).__init__(agent, pdist, rb_vec,
@@ -455,7 +456,12 @@ class SGMSearchPolicy(SoRBSearchPolicy):
 
         # Measure qvalue consistency
         qval_diffs = new_qvals - existing_qvals
-        qval_inconsistency = np.linalg.norm(qval_diffs, np.inf)
+        if self.criterion == "two-way":
+            qval_inconsistency = np.linalg.norm(qval_diffs, np.inf)
+        elif self.criterion == "incoming":
+            qval_inconsistency = qval_diffs[0]
+        else:
+            qval_inconsistency = qval_diffs[1]
 
         # Report qvalue consistency
         if verbose:
